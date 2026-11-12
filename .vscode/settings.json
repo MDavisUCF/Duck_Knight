@@ -67,5 +67,5 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "DuckKnight.slnx"
+    "dotnet.defaultSolution": "Duck_Knight.slnx"
 }
