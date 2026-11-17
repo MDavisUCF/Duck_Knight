@@ -15,11 +15,34 @@ public class InputManager : MonoBehaviour
     public Transform swordTransform;
     public Transform mocapTarget;
 
+    [Header("Sword Swing Animation")]
+public Transform swordSwingPivot;
+
+    [Header("Duck and Shield")]
+    public Transform duckTransform;
+    public Transform shieldTransform;
+    [Header("Shield Visibility")]
+public GameObject shieldModel;
+
+    [Header("Keyboard Combat Stance")]
+public Transform swordRestPoint;
+public Transform shieldRestPoint;
+
     [Header("Input Mode")]
     public InputMode currentMode = InputMode.DebugKeyboard;
 
-    [Header("Debug Keyboard")]
-    public float moveSpeed = 5f;
+    [Header("Mouse Sword Controls")]
+    public Camera gameplayCamera;
+    public float mouseGroundHeight = 0f;
+    public float swordReach = 1.2f;
+    public float swordHeightOffset = 0.75f;
+    public float duckRotationSpeed = 12f;
+
+    [Header("Sword Swing")]
+    public float swingDuration = 0.35f;
+    public float swingCooldown = 0.15f;
+    public float swingStartAngle = -70f;
+    public float swingEndAngle = 70f;
 
     [Header("Live Sword Tracking")]
     public Transform liveMocapSource;
@@ -29,10 +52,19 @@ public class InputManager : MonoBehaviour
     public Vector3 liveMocapRotationOffset = Vector3.zero;
     public float liveMocapScale = 1f;
 
+    [Header("Live Shield Tracking")]
+    public Transform shieldMocapSource;
+    public OptitrackRigidBody shieldRigidBody;
+
+    public Vector3 shieldMocapPositionOffset = Vector3.zero;
+    public Vector3 shieldMocapRotationOffset = Vector3.zero;
+    public float shieldMocapScale = 1f;
+
+    [Header("Tracking Settings")]
     [Range(0.05f, 1f)]
     public float trackingTimeout = 0.25f;
 
-    [Header("Shield Debug Activation")]
+    [Header("Mouse Shield Activation")]
     public float shieldDuration = 5f;
 
     public bool ShieldActive { get; private set; }
@@ -42,7 +74,7 @@ public class InputManager : MonoBehaviour
     {
         get
         {
-            if (!ShieldActive)
+            if (!ShieldActive || currentMode == InputMode.MocapLive)
                 return 0f;
 
             return Mathf.Max(0f, shieldEndTime - Time.time);
@@ -50,19 +82,22 @@ public class InputManager : MonoBehaviour
     }
 
     private float shieldEndTime;
-    private float keyboardHeight;
+    private float swingTimer;
+    private float nextAllowedSwingTime;
+    private bool swinging;
+
+    private Vector3 originalShieldLocalPosition;
+    private Quaternion originalShieldLocalRotation;
 
     void Start()
     {
-        if (swordTransform != null)
-        {
-            keyboardHeight = swordTransform.position.y;
+        if (gameplayCamera == null)
+            gameplayCamera = Camera.main;
 
-            if (mocapTarget != null)
-            {
-                mocapTarget.position = swordTransform.position;
-                mocapTarget.rotation = swordTransform.rotation;
-            }
+        if (shieldTransform != null)
+        {
+            originalShieldLocalPosition = shieldTransform.localPosition;
+            originalShieldLocalRotation = shieldTransform.localRotation;
         }
 
         if (PlayerPrefs.HasKey(InputModePrefKey))
@@ -72,20 +107,16 @@ public class InputManager : MonoBehaviour
         }
 
         if (!System.Enum.IsDefined(typeof(InputMode), currentMode))
-        {
             currentMode = InputMode.DebugKeyboard;
-        }
 
         ShieldActive = false;
-        shieldEndTime = 0f;
+        SwordActive = false;
     }
 
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.M))
-        {
             ToggleInputMode();
-        }
 
         bool roundRunning =
             GameManager.instance == null ||
@@ -95,83 +126,270 @@ public class InputManager : MonoBehaviour
         {
             SwordActive = false;
             ShieldActive = false;
+            swinging = false;
             return;
         }
 
         if (currentMode == InputMode.DebugKeyboard)
         {
-            UpdateKeyboardSword();
-            UpdateKeyboardShield();
+            UpdateMouseAttack();
+            UpdateMouseShield();
         }
         else
         {
             UpdateLiveSword();
-
-            // Independent shield tracking will be added
-            // when the second OptiTrack rigid body is ready.
-            ShieldActive = false;
+            UpdateLiveShield();
         }
     }
 
-    void UpdateKeyboardSword()
+    
+
+void LateUpdate()
+{
+    UpdateShieldVisibility();
+
+    if (currentMode == InputMode.MocapLive)
     {
-        if (swordTransform == null)
-        {
-            SwordActive = false;
-            return;
-        }
+        if (swordSwingPivot != null)
+            swordSwingPivot.localRotation = Quaternion.identity;
 
-        Vector3 move = Vector3.zero;
-
-        if (Input.GetKey(KeyCode.W))
-            move += Vector3.forward;
-
-        if (Input.GetKey(KeyCode.S))
-            move += Vector3.back;
-
-        if (Input.GetKey(KeyCode.A))
-            move += Vector3.left;
-
-        if (Input.GetKey(KeyCode.D))
-            move += Vector3.right;
-
-        Vector3 newPosition = swordTransform.position;
-
-        newPosition +=
-            move.normalized * moveSpeed * Time.deltaTime;
-
-        // Maintain a fixed height during keyboard testing.
-        newPosition.y = keyboardHeight;
-
-        swordTransform.position = newPosition;
-
-        if (mocapTarget != null)
-        {
-            mocapTarget.position = swordTransform.position;
-            mocapTarget.rotation = swordTransform.rotation;
-        }
-
-        // The sword is always active in keyboard mode.
-        SwordActive = true;
+        return;
     }
 
-    void UpdateKeyboardShield()
+    if (GameManager.instance != null &&
+        !GameManager.instance.gameRunning)
+        return;
+
+    UpdateMouseSwordPosition();
+    UpdateMouseShieldPosition();
+    UpdateSwordSwingAnimation();
+}
+
+
+
+    // -------------------------
+    // MOUSE ATTACKS
+    // -------------------------
+
+    void UpdateMouseAttack()
+    {
+        if (Input.GetMouseButtonDown(0) &&
+            !swinging &&
+            Time.time >= nextAllowedSwingTime)
+        {
+            swinging = true;
+            swingTimer = 0f;
+        }
+
+        if (swinging)
+        {
+            swingTimer += Time.deltaTime;
+
+            if (swingTimer >= Mathf.Max(0.01f, swingDuration))
+            {
+                swinging = false;
+                nextAllowedSwingTime = Time.time + swingCooldown;
+            }
+        }
+
+        // Only an actual mouse swing can damage goblins.
+        SwordActive = swinging;
+    }
+
+   
+void UpdateMouseSwordPosition()
+{
+    if (swordTransform == null ||
+        duckTransform == null ||
+        swordRestPoint == null ||
+        gameplayCamera == null)
+        return;
+
+    // Aim Duck Knight toward the mouse cursor.
+    Ray ray = gameplayCamera.ScreenPointToRay(
+        Input.mousePosition
+    );
+
+    Plane groundPlane = new Plane(
+        Vector3.up,
+        new Vector3(0f, mouseGroundHeight, 0f)
+    );
+
+    if (groundPlane.Raycast(ray, out float distance))
+    {
+        Vector3 mousePoint = ray.GetPoint(distance);
+
+        Vector3 aimDirection =
+            mousePoint - duckTransform.position;
+
+        aimDirection.y = 0f;
+
+        if (aimDirection.sqrMagnitude > 0.001f)
+        {
+Quaternion aimRotation =
+    Quaternion.LookRotation(
+        aimDirection.normalized,
+        Vector3.up
+    ) * Quaternion.Euler(0f, 180f, 0f);
+
+            duckTransform.rotation = Quaternion.Slerp(
+                duckTransform.rotation,
+                aimRotation,
+                duckRotationSpeed * Time.deltaTime
+            );
+        }
+    }
+
+    // Resting position is at Duck Knight's front-right.
+    // Only rotate the weapon around the duck during a swing.
+    float swingAngle = 0f;
+
+    if (swinging)
+    {
+        float progress = Mathf.Clamp01(
+            swingTimer / Mathf.Max(0.01f, swingDuration)
+        );
+
+        // Sweep from the right toward the left.
+        swingAngle = Mathf.Lerp(
+            swingEndAngle,
+            swingStartAngle,
+            progress
+        );
+    }
+
+    Quaternion swingRotation = Quaternion.AngleAxis(
+        swingAngle,
+        Vector3.up
+    );
+
+    Vector3 restOffset =
+        swordRestPoint.position - duckTransform.position;
+
+    swordTransform.position =
+        duckTransform.position +
+        swingRotation * restOffset;
+
+    swordTransform.rotation =
+        swingRotation * swordRestPoint.rotation;
+
+    if (mocapTarget != null)
+    {
+        mocapTarget.position = swordTransform.position;
+        mocapTarget.rotation = swordTransform.rotation;
+    }
+}
+
+
+void UpdateSwordSwingAnimation()
+{
+    if (swordSwingPivot == null)
+        return;
+
+    float sideAngle = 0f;
+    float downwardAngle = 0f;
+
+    if (swinging)
+    {
+        float progress = Mathf.Clamp01(
+            swingTimer / Mathf.Max(0.01f, swingDuration)
+        );
+
+        if (progress < 0.6f)
+        {
+            // Fast attack.
+            float attackProgress =
+                Mathf.SmoothStep(0f, 1f, progress / 0.6f);
+
+            sideAngle = Mathf.Lerp(-55f, 65f, attackProgress);
+
+            downwardAngle = Mathf.Lerp(
+                0f,
+                65f,
+                attackProgress
+            );
+        }
+        else
+        {
+            // Return to resting position.
+            float recoveryProgress =
+                Mathf.SmoothStep(
+                    0f,
+                    1f,
+                    (progress - 0.6f) / 0.4f
+                );
+
+            sideAngle = Mathf.Lerp(
+                65f,
+                0f,
+                recoveryProgress
+            );
+
+            downwardAngle = Mathf.Lerp(
+                65f,
+                0f,
+                recoveryProgress
+            );
+        }
+    }
+
+    swordSwingPivot.localRotation =
+        Quaternion.Euler(
+            downwardAngle,
+            0f,
+            sideAngle
+        );
+}
+
+
+void UpdateMouseShieldPosition()
+{
+    if (shieldTransform == null || shieldRestPoint == null)
+        return;
+
+    // Shield stays on the duck's front-left.
+    // The existing ShieldActive property controls blocking.
+    shieldTransform.position = shieldRestPoint.position;
+    shieldTransform.rotation = shieldRestPoint.rotation;
+}
+
+
+    // -------------------------
+    // MOUSE SHIELD
+    // -------------------------
+
+    void UpdateMouseShield()
     {
         if (Input.GetKeyDown(KeyCode.Space) && !ShieldActive)
         {
             ShieldActive = true;
             shieldEndTime = Time.time + shieldDuration;
 
-            Debug.Log("DUCK KNIGHT: Shield activated!");
+            if (AudioManager.instance != null)
+                AudioManager.instance.PlayShieldActivateSound();
         }
 
         if (ShieldActive && Time.time >= shieldEndTime)
         {
             ShieldActive = false;
 
-            Debug.Log("DUCK KNIGHT: Shield expired.");
+            if (AudioManager.instance != null)
+                AudioManager.instance.PlayShieldDeactivateSound();
         }
     }
+void UpdateShieldVisibility()
+{
+    if (shieldModel == null)
+        return;
+
+    if (shieldModel.activeSelf != ShieldActive)
+    {
+        shieldModel.SetActive(ShieldActive);
+    }
+}
+    // -------------------------
+    // LIVE SWORD
+    // -------------------------
 
     void UpdateLiveSword()
     {
@@ -180,9 +398,7 @@ public class InputManager : MonoBehaviour
         if (!SwordActive ||
             swordTransform == null ||
             liveMocapSource == null)
-        {
             return;
-        }
 
         Vector3 mappedPosition =
             liveMocapSource.position * liveMocapScale
@@ -202,17 +418,51 @@ public class InputManager : MonoBehaviour
         }
     }
 
+    // -------------------------
+    // LIVE SHIELD
+    // -------------------------
+
+    void UpdateLiveShield()
+    {
+        ShieldActive = HasShieldTracking();
+
+        if (!ShieldActive ||
+            shieldTransform == null ||
+            shieldMocapSource == null)
+            return;
+
+        shieldTransform.position =
+            shieldMocapSource.position * shieldMocapScale
+            + shieldMocapPositionOffset;
+
+        shieldTransform.rotation =
+            shieldMocapSource.rotation *
+            Quaternion.Euler(shieldMocapRotationOffset);
+    }
+
+    // -------------------------
+    // TRACKING VALIDATION
+    // -------------------------
+
     public bool HasLiveTracking()
     {
-        if (liveRigidBody == null ||
-            liveRigidBody.StreamingClient == null)
-        {
+        return HasTracking(liveRigidBody);
+    }
+
+    public bool HasShieldTracking()
+    {
+        return HasTracking(shieldRigidBody);
+    }
+
+    private bool HasTracking(OptitrackRigidBody rigidBody)
+    {
+        if (rigidBody == null ||
+            rigidBody.StreamingClient == null)
             return false;
-        }
 
         OptitrackRigidBodyState state =
-            liveRigidBody.StreamingClient.GetLatestRigidBodyState(
-                liveRigidBody.RigidBodyId,
+            rigidBody.StreamingClient.GetLatestRigidBodyState(
+                rigidBody.RigidBodyId,
                 false
             );
 
@@ -224,6 +474,10 @@ public class InputManager : MonoBehaviour
         return age >= 0f && age <= trackingTimeout;
     }
 
+    // -------------------------
+    // MODE SWITCHING
+    // -------------------------
+
     void ToggleInputMode()
     {
         if (currentMode == InputMode.DebugKeyboard)
@@ -234,25 +488,31 @@ public class InputManager : MonoBehaviour
         {
             currentMode = InputMode.DebugKeyboard;
 
-            if (swordTransform != null)
-                keyboardHeight = swordTransform.position.y;
+            if (shieldTransform != null)
+            {
+                shieldTransform.localPosition =
+                    originalShieldLocalPosition;
+
+                shieldTransform.localRotation =
+                    originalShieldLocalRotation;
+            }
         }
 
+        swinging = false;
+        SwordActive = false;
         ShieldActive = false;
 
         PlayerPrefs.SetInt(InputModePrefKey, (int)currentMode);
         PlayerPrefs.Save();
 
         if (AudioManager.instance != null)
-        {
             AudioManager.instance.PlayInputModeSound();
-        }
-
-        Debug.Log("Input Mode: " + currentMode);
     }
 
     public string GetInputModeName()
     {
-        return currentMode.ToString();
+        return currentMode == InputMode.DebugKeyboard
+            ? "Mouse"
+            : "Motion Capture";
     }
 }

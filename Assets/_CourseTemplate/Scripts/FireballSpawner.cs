@@ -101,7 +101,7 @@ public class FireballSpawner : MonoBehaviour
 
         activeFireballs.Add(fireball);
 
-        // Remove missed projectiles so they don't accumulate.
-        Destroy(fireball, fireballLifetime);
+// Remove missed projectiles so they don't accumulate.
+Destroy(fireball, fireballLifetime);
     }
 }

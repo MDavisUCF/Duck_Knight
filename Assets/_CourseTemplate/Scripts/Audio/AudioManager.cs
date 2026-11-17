@@ -1,113 +1,170 @@
+
 using UnityEngine;
 
-/// <summary>
-/// Handles all simple sound effect playback for the template.
-/// 
-/// Other scripts do not need to know how audio works.
-/// They can simply call methods like:
-/// AudioManager.instance.PlayScoreSound();
-/// </summary>
 public class AudioManager : MonoBehaviour
 {
-    // Static instance allows other scripts to access this AudioManager easily.
-    // Example: AudioManager.instance.PlayScoreSound();
     public static AudioManager instance;
 
-    [Header("Audio Source")]
-
-    // The AudioSource is the Unity component that actually plays sounds.
-    // This should be assigned in the Inspector, or the script will try to find one automatically.
+    [Header("Audio Sources")]
     public AudioSource audioSource;
+    public AudioSource musicSource;
 
-    [Header("Gameplay Sounds")]
+    [Header("Combat Sounds")]
+public AudioClip[] goblinDeathClips;
+    public AudioClip shieldBlockClip;
+    public AudioClip goblinAttackClip;
+    public AudioClip fireballImpactClip;
+    public AudioClip fireballLaunchClip;
 
-    // These are the sound clips used by different gameplay events.
-    // Drag audio files into these slots in the Inspector.
-    public AudioClip scoreClip;
-    public AudioClip dangerClip;
-    public AudioClip propActivateClip;
-    public AudioClip propDeactivateClip;
+    [Header("Egg Health Sounds")]
+    public AudioClip eggCrackClip;
+    public AudioClip eggBreakClip;
+
+    [Header("Shield Sounds")]
+    public AudioClip shieldActivateClip;
+    public AudioClip shieldDeactivateClip;
+
+    [Header("Round Sounds")]
+    public AudioClip victoryClip;
+    public AudioClip defeatClip;
+
+    [Header("Interface Sounds")]
     public AudioClip inputModeClip;
     public AudioClip resetClip;
 
-    [Header("Settings")]
+    [Header("Background Music")]
+    public AudioClip backgroundMusic;
 
-    // Controls how loud sound effects are.
-    // Range keeps the value between 0 and 1 in the Inspector.
+    [Header("Volume")]
     [Range(0f, 1f)]
     public float soundVolume = 0.7f;
 
+    [Range(0f, 1f)]
+    public float musicVolume = 0.4f;
+
     void Awake()
     {
-        // This makes sure there is only one AudioManager in the scene.
-        // If another one appears, it destroys the duplicate.
         if (instance != null && instance != this)
         {
             Destroy(gameObject);
             return;
         }
 
-        // Store this AudioManager so other scripts can find it.
         instance = this;
 
-        // If no AudioSource was assigned manually, try to find one on this same GameObject.
         if (audioSource == null)
-        {
             audioSource = GetComponent<AudioSource>();
+    }
+
+    void Start()
+    {
+        if (musicSource != null && backgroundMusic != null)
+        {
+            musicSource.clip = backgroundMusic;
+            musicSource.loop = true;
+            musicSource.volume = musicVolume;
+            musicSource.Play();
         }
     }
 
-    // Plays when the player successfully scores.
-    public void PlayScoreSound()
+    public void PlayShieldBlockSound()
     {
-        PlaySound(scoreClip);
+        PlaySound(shieldBlockClip);
     }
 
-    // Plays when the player hits a danger zone.
-    public void PlayDangerSound()
+    public void PlayGoblinAttackSound()
     {
-        PlaySound(dangerClip);
+        PlaySound(goblinAttackClip);
     }
 
-    // Plays when the prop becomes active.
-    public void PlayPropActivateSound()
+    public void PlayFireballImpactSound()
     {
-        PlaySound(propActivateClip);
+        PlaySound(fireballImpactClip);
     }
 
-    // Plays when the prop becomes inactive.
-    public void PlayPropDeactivateSound()
+    public void PlayEggCrackSound()
     {
-        PlaySound(propDeactivateClip);
+        PlaySound(eggCrackClip);
     }
 
-    // Plays when the input mode changes, such as switching from keyboard to mocap mode.
+    public void PlayEggBreakSound()
+    {
+        PlaySound(eggBreakClip);
+    }
+
+    public void PlayShieldActivateSound()
+    {
+        PlaySound(shieldActivateClip);
+    }
+
+    public void PlayShieldDeactivateSound()
+    {
+        PlaySound(shieldDeactivateClip);
+    }
+
+    public void PlayVictorySound()
+    {
+        PlaySound(victoryClip);
+    }
+
+    public void PlayDefeatSound()
+    {
+        PlaySound(defeatClip);
+    }
+
     public void PlayInputModeSound()
     {
         PlaySound(inputModeClip);
     }
 
-    // Plays when the scene resets.
     public void PlayResetSound()
     {
         PlaySound(resetClip);
     }
 
-    /// <summary>
-    /// Plays one sound effect without interrupting other sounds.
-    /// This is private because other scripts should use the specific sound methods above.
-    /// </summary>
+    // Compatibility with existing gameplay scripts.
+    public void PlayScoreSound()
+    {
+        PlayGoblinDeathSound();
+    }
+
+    public void PlayDangerSound()
+    {
+        PlayFireballImpactSound();
+    }
+
+    public void PlayPropActivateSound()
+    {
+        PlayShieldActivateSound();
+    }
+
+    public void PlayPropDeactivateSound()
+    {
+        PlayShieldDeactivateSound();
+    }
+
     private void PlaySound(AudioClip clip)
     {
-        // If there is no AudioSource or no clip assigned, do nothing.
-        // This prevents the game from throwing errors if a sound is missing.
         if (audioSource == null || clip == null)
-        {
             return;
-        }
 
-        // PlayOneShot plays the sound once.
-        // It is useful for short sound effects like clicks, beeps, and score sounds.
         audioSource.PlayOneShot(clip, soundVolume);
     }
+    public void PlayGoblinDeathSound()
+{
+    if (goblinDeathClips == null ||
+        goblinDeathClips.Length == 0)
+        return;
+
+    AudioClip selectedClip = goblinDeathClips[
+        Random.Range(0, goblinDeathClips.Length)
+    ];
+
+    PlaySound(selectedClip);
+}
+
+public void PlayFireballLaunchSound()
+{
+    PlaySound(fireballLaunchClip);
+}
 }

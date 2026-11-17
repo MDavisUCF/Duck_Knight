@@ -5,7 +5,7 @@ using UnityEngine;
 public class GoblinSpawner : MonoBehaviour
 {
     [Header("References")]
-    public GameObject goblinPrefab;
+    public GameObject[] goblinPrefabs;
     public Transform duckKnight;
     public InputManager inputManager;
     public Collider swordCollider;
@@ -40,7 +40,6 @@ public class GoblinSpawner : MonoBehaviour
             !GameManager.instance.gameRunning)
             return;
 
-        // Count only goblins still active in the scene.
         spawnedGoblins.RemoveAll(
             goblin => goblin == null || !goblin.activeInHierarchy
         );
@@ -50,12 +49,10 @@ public class GoblinSpawner : MonoBehaviour
 
         float elapsed = Time.time - roundStartTime;
 
-        // Progress from 0 to 1 during the round.
         float progress = Mathf.Clamp01(
             elapsed / roundDuration
         );
 
-        // Goblins spawn more frequently as time passes.
         float currentInterval = Mathf.Lerp(
             startingInterval,
             minimumInterval,
@@ -72,7 +69,18 @@ public class GoblinSpawner : MonoBehaviour
 
     void SpawnGoblin()
     {
-        if (goblinPrefab == null)
+        if (goblinPrefabs == null ||
+            goblinPrefabs.Length == 0)
+            return;
+
+        // Randomly select a goblin variant.
+        GameObject selectedPrefab =
+            goblinPrefabs[
+                Random.Range(0, goblinPrefabs.Length)
+            ];
+            Debug.Log("DUCK KNIGHT: Spawning " + selectedPrefab.name);
+
+        if (selectedPrefab == null)
             return;
 
         Vector3 spawnPosition = new Vector3(
@@ -82,21 +90,19 @@ public class GoblinSpawner : MonoBehaviour
         );
 
         GameObject goblin = Instantiate(
-            goblinPrefab,
+            selectedPrefab,
             spawnPosition,
             Quaternion.identity
         );
 
         goblin.SetActive(true);
 
-        // Assign the duck as the target.
         GoblinChase chase =
             goblin.GetComponent<GoblinChase>();
 
         if (chase != null)
             chase.duckKnight = duckKnight;
 
-        // Connect the existing sword scoring system.
         ScoreZone scoreZone =
             goblin.GetComponent<ScoreZone>();
 

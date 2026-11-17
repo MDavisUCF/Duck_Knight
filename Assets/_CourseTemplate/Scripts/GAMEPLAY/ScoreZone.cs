@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// Detects when Duck Knight's sword hits a goblin.
-/// Only the sword can damage goblins.
+/// Supports both Mouse and Motion Capture modes.
 /// </summary>
 public class ScoreZone : MonoBehaviour
 {
@@ -11,43 +11,47 @@ public class ScoreZone : MonoBehaviour
     public InputManager inputManager;
     public Collider swordCollider;
 
-    [Header("Scoring")]
-    public int scoreValue = 1;
-
-    // Prevents repeated scoring from the same goblin.
+    // Prevents the same goblin from being defeated twice.
     private bool hasBeenHit = false;
 
     private void OnTriggerEnter(Collider other)
     {
-        // Only the sword can damage this goblin.
+        TrySwordHit(other);
+    }
+
+    private void OnTriggerStay(Collider other)
+    {
+        TrySwordHit(other);
+    }
+
+    private void TrySwordHit(Collider other)
+    {
+        if (hasBeenHit)
+            return;
+
+        if (GameManager.instance != null &&
+            !GameManager.instance.gameRunning)
+            return;
+
+        // Only the sword can defeat goblins.
         if (swordCollider == null || other != swordCollider)
             return;
 
-        // The sword must be active.
+        // Mouse mode will require an active sword swing.
+        // Mocap mode will use valid sword tracking.
         if (inputManager == null || !inputManager.SwordActive)
-            return;
-
-        // Don't award points twice.
-        if (hasBeenHit)
             return;
 
         hasBeenHit = true;
 
-        // Award points.
-        if (GameManager.instance != null)
-        {
-            GameManager.instance.AddScore(scoreValue);
-        }
-
-        // Play the score sound.
+        // Play a random goblin death sound.
         if (AudioManager.instance != null)
         {
-            AudioManager.instance.PlayScoreSound();
+            AudioManager.instance.PlayGoblinDeathSound();
         }
 
         Debug.Log("DUCK KNIGHT: Goblin defeated!");
 
-        // Hide the goblin after a successful hit.
         gameObject.SetActive(false);
     }
 }

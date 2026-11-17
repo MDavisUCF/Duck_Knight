@@ -1,38 +1,77 @@
 
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using TMPro;
 
 /// <summary>
-/// Manages Duck Knight's score, timer, egg health,
-/// damage protection, victory, and game over.
+/// Manages Duck Knight's round, egg health,
+/// victory, defeat, and mocap preparation.
 /// </summary>
 public class GameManager : MonoBehaviour
 {
     public static GameManager instance;
 
+    private const string InputModePrefKey = "LastInputMode";
+
     [Header("Game State")]
     public int score = 0;
-    public float roundTime = 90f;
+    public float roundTime = 60f;
     public bool gameRunning = true;
 
     [Header("Egg Health")]
     public int maxEggs = 4;
     public int currentEggs = 4;
+    public int hitsPerEgg = 3;
+    public int damageTaken = 0;
 
-    [Header("Damage Settings")]
-    public float damageImmunityDuration = 1f;
+    [Header("Motion Capture Preparation")]
+    public GameObject mocapReadyPanel;
 
-    private float lastDamageTime = -999f;
+    [Header("End Game UI")]
+    public GameObject endGamePanel;
+    public TextMeshProUGUI resultText;
+
     private bool resetPending = false;
-
-    public bool IsDamageImmune =>
-        Time.time < lastDamageTime + damageImmunityDuration;
+    private bool waitingForMocap = false;
 
     void Awake()
     {
         instance = this;
 
         currentEggs = maxEggs;
+        damageTaken = 0;
+
+        if (endGamePanel != null)
+            endGamePanel.SetActive(false);
+
+        // Main menu stores Mouse = 0, Motion Capture = 2.
+        int selectedMode = PlayerPrefs.GetInt(
+            InputModePrefKey,
+            0
+        );
+
+        waitingForMocap =
+            selectedMode == (int)InputManager.InputMode.MocapLive;
+
+        if (waitingForMocap)
+        {
+            // Freeze gameplay, but not Unity or OptiTrack.
+            gameRunning = false;
+
+            if (mocapReadyPanel != null)
+                mocapReadyPanel.SetActive(true);
+
+            Debug.Log(
+                "DUCK KNIGHT: Waiting for knight to begin battle."
+            );
+        }
+        else
+        {
+            gameRunning = true;
+
+            if (mocapReadyPanel != null)
+                mocapReadyPanel.SetActive(false);
+        }
     }
 
     void Update()
@@ -48,7 +87,6 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        // Press R to restart.
         if (Input.GetKeyDown(KeyCode.R))
         {
             ResetGame();
@@ -56,8 +94,25 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Adds points while the round is active.
+    /// Called by Begin Battle button.
+    /// Starts the round after mocap preparation.
     /// </summary>
+    public void BeginBattle()
+    {
+        if (!waitingForMocap || gameRunning || resetPending)
+            return;
+
+        waitingForMocap = false;
+        gameRunning = true;
+
+        if (mocapReadyPanel != null)
+            mocapReadyPanel.SetActive(false);
+
+        Debug.Log(
+            "DUCK KNIGHT: BEGIN, MY LIEGE! Battle commenced!"
+        );
+    }
+
     public void AddScore(int amount)
     {
         if (!gameRunning)
@@ -69,38 +124,44 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Attempts to break one egg.
-    /// Returns true if damage was actually taken.
+    /// Applies damage to the current egg.
+    /// Each egg breaks after hitsPerEgg hits.
     /// </summary>
     public bool TakeDamage()
     {
         if (!gameRunning || currentEggs <= 0)
             return false;
 
-        // Prevent several enemies from breaking eggs at once.
-        if (IsDamageImmune)
-            return false;
+        damageTaken++;
 
-        currentEggs--;
-        lastDamageTime = Time.time;
+        int safeHitsPerEgg = Mathf.Max(1, hitsPerEgg);
+
+        if (AudioManager.instance != null)
+        {
+            if (damageTaken % safeHitsPerEgg == 0)
+                AudioManager.instance.PlayEggBreakSound();
+            else
+                AudioManager.instance.PlayEggCrackSound();
+        }
+
+        currentEggs = Mathf.Max(
+            0,
+            maxEggs - (damageTaken / safeHitsPerEgg)
+        );
 
         Debug.Log(
-            "DUCK KNIGHT: Egg broken! " +
-            currentEggs + " / " + maxEggs + " remaining."
+            "DUCK KNIGHT: Damage taken = " +
+            damageTaken +
+            " | Eggs remaining = " +
+            currentEggs + " / " + maxEggs
         );
 
         if (currentEggs <= 0)
-        {
-            currentEggs = 0;
             LoseGame();
-        }
 
         return true;
     }
 
-    /// <summary>
-    /// Called when the player survives the round.
-    /// </summary>
     private void WinGame()
     {
         if (!gameRunning)
@@ -108,14 +169,20 @@ public class GameManager : MonoBehaviour
 
         gameRunning = false;
 
+        if (resultText != null)
+            resultText.text = "THE KINGDOM IS SAFE!";
+
+        if (endGamePanel != null)
+            endGamePanel.SetActive(true);
+
+        if (AudioManager.instance != null)
+            AudioManager.instance.PlayVictorySound();
+
         Debug.Log(
             "DUCK KNIGHT: VICTORY! Final Score: " + score
         );
     }
 
-    /// <summary>
-    /// Called when all four eggs are broken.
-    /// </summary>
     private void LoseGame()
     {
         if (!gameRunning)
@@ -123,25 +190,31 @@ public class GameManager : MonoBehaviour
 
         gameRunning = false;
 
+        if (resultText != null)
+            resultText.text = "FAILURE!";
+
+        if (endGamePanel != null)
+            endGamePanel.SetActive(true);
+
+        if (AudioManager.instance != null)
+            AudioManager.instance.PlayDefeatSound();
+
         Debug.Log(
-            "DUCK KNIGHT: GAME OVER! All eggs broken. Final Score: " + score
+            "DUCK KNIGHT: GAME OVER! All eggs broken. Final Score: " +
+            score
         );
     }
 
-    /// <summary>
-    /// Plays the reset sound and reloads the scene.
-    /// </summary>
     public void ResetGame()
     {
         if (resetPending)
             return;
 
         resetPending = true;
+        gameRunning = false;
 
         if (AudioManager.instance != null)
-        {
             AudioManager.instance.PlayResetSound();
-        }
 
         Invoke(nameof(ReloadCurrentScene), 0.65f);
     }
@@ -151,5 +224,10 @@ public class GameManager : MonoBehaviour
         SceneManager.LoadScene(
             SceneManager.GetActiveScene().name
         );
+    }
+
+    public void ReturnToMainMenu()
+    {
+        SceneManager.LoadScene("DuckKnight_Menu");
     }
 }

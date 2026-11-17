@@ -12,8 +12,6 @@ public class DangerZone : MonoBehaviour
     public float moveSpeed = 3f;
     public float hitDistance = 0.55f;
 
-    [Header("Shield Block")]
-    public int blockPoints = 1;
 
     private Vector3 travelDirection;
     private Collider fireballCollider;
@@ -98,23 +96,23 @@ public class DangerZone : MonoBehaviour
         );
     }
 
-    private void ResolveShieldBlock()
+private void ResolveShieldBlock()
+{
+    if (resolved)
+        return;
+
+    resolved = true;
+
+    // Play the shield block sound.
+    if (AudioManager.instance != null)
     {
-        if (resolved)
-            return;
-
-        resolved = true;
-
-        if (GameManager.instance != null)
-            GameManager.instance.AddScore(blockPoints);
-
-        if (AudioManager.instance != null)
-            AudioManager.instance.PlayDangerSound();
-
-        Debug.Log("DUCK KNIGHT: Fireball blocked! +1 point.");
-
-        ResolveFireball();
+        AudioManager.instance.PlayShieldBlockSound();
     }
+
+    Debug.Log("DUCK KNIGHT: Fireball blocked!");
+
+    ResolveFireball();
+}
 
     private void ResolveFireball()
     {

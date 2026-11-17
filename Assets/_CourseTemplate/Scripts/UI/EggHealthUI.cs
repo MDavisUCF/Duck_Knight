@@ -1,34 +1,54 @@
 
-using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class EggHealthUI : MonoBehaviour
 {
-    [Header("UI")]
-    public TMP_Text eggHealthText;
+    [Header("Egg Images")]
+    public Image[] eggImages;
 
-    [Header("Placeholder Characters")]
-    public string wholeEgg = "●";
-    public string brokenEgg = "✕";
+    [Header("Egg Sprites")]
+    public Sprite wholeEgg;
+    public Sprite crackedEgg;
+    public Sprite[] brokenEggs;
 
     void Update()
     {
-        if (GameManager.instance == null || eggHealthText == null)
+        if (GameManager.instance == null)
             return;
 
-        int currentEggs = GameManager.instance.currentEggs;
-        int maxEggs = GameManager.instance.maxEggs;
+        GameManager game = GameManager.instance;
 
-        string display = "";
+        int hitsPerEgg = Mathf.Max(1, game.hitsPerEgg);
 
-        for (int i = 0; i < maxEggs; i++)
+        for (int i = 0; i < eggImages.Length; i++)
         {
-            display += i < currentEggs ? wholeEgg : brokenEgg;
+            if (eggImages[i] == null)
+                continue;
 
-            if (i < maxEggs - 1)
-                display += " ";
+            int hitsOnThisEgg = Mathf.Clamp(
+                game.damageTaken - (i * hitsPerEgg),
+                0,
+                hitsPerEgg
+            );
+
+            if (hitsOnThisEgg >= hitsPerEgg)
+            {
+                if (brokenEggs != null &&
+                    brokenEggs.Length > 0)
+                {
+                    eggImages[i].sprite =
+                        brokenEggs[i % brokenEggs.Length];
+                }
+            }
+            else if (hitsOnThisEgg >= 1)
+            {
+                eggImages[i].sprite = crackedEgg;
+            }
+            else
+            {
+                eggImages[i].sprite = wholeEgg;
+            }
         }
-
-        eggHealthText.text = display;
     }
 }

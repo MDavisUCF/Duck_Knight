@@ -38,6 +38,7 @@ public class UIManager : MonoBehaviour
             scoreText.text = "Score: " + game.score;
         }
 
+       
         // TIMER
         if (timerText != null)
         {
@@ -46,8 +47,12 @@ public class UIManager : MonoBehaviour
                 Mathf.CeilToInt(game.roundTime)
             );
 
-            timerText.text = "Time: " + remainingSeconds;
+            int minutes = remainingSeconds / 60;
+            int seconds = remainingSeconds % 60;
+
+            timerText.text = $"{minutes}:{seconds:00}";
         }
+
 
         // SHIELD STATUS
         if (propStateText != null)

@@ -15,6 +15,12 @@ public class GoblinChase : MonoBehaviour
     private Collider shieldCollider;
     private Collider goblinCollider;
 
+    [Header("Ground Detection")]
+public LayerMask groundLayer;
+public float groundRayHeight = 5f;
+public float groundRayDistance = 20f;
+public float groundOffset = 0f;
+
     void Start()
     {
         goblinCollider = GetComponent<Collider>();
@@ -46,16 +52,37 @@ public class GoblinChase : MonoBehaviour
             !GameManager.instance.gameRunning)
             return;
 
-        Vector3 targetPosition = duckKnight.position;
+       Vector3 targetPosition = duckKnight.position;
 
-        // Keep goblins moving along the ground.
-        targetPosition.y = transform.position.y;
+// Move horizontally toward Duck Knight.
+Vector3 horizontalTarget = new Vector3(
+    targetPosition.x,
+    transform.position.y,
+    targetPosition.z
+);
 
-        transform.position = Vector3.MoveTowards(
-            transform.position,
-            targetPosition,
-            moveSpeed * Time.deltaTime
-        );
+transform.position = Vector3.MoveTowards(
+    transform.position,
+    horizontalTarget,
+    moveSpeed * Time.deltaTime
+);
+
+// Find the terrain directly beneath the goblin.
+Vector3 rayOrigin = transform.position +
+    Vector3.up * groundRayHeight;
+
+if (Physics.Raycast(
+    rayOrigin,
+    Vector3.down,
+    out RaycastHit groundHit,
+    groundRayDistance,
+    groundLayer,
+    QueryTriggerInteraction.Ignore))
+{
+    Vector3 position = transform.position;
+    position.y = groundHit.point.y + groundOffset;
+    transform.position = position;
+}
         // Rotate the goblin toward Duck Knight.
 Vector3 direction = targetPosition - transform.position;
 
@@ -82,8 +109,10 @@ if (direction.sqrMagnitude > 0.001f)
 
         // If the goblin reaches Duck Knight without being blocked,
         // break an egg.
-        if (Vector3.Distance(transform.position, targetPosition)
-            <= reachDistance)
+Vector3 distanceToDuck = duckKnight.position - transform.position;
+distanceToDuck.y = 0f;
+
+if (distanceToDuck.magnitude <= reachDistance)
         {
             if (GameManager.instance != null)
             {
