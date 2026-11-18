@@ -44,6 +44,15 @@ public Transform shieldRestPoint;
     public float swingStartAngle = -70f;
     public float swingEndAngle = 70f;
 
+
+[Header("Mocap Play Space Alignment")]
+[Range(0f, 360f)]
+public float mocapAlignmentY = 180f;
+
+public Vector3 mocapTrackingOrigin = Vector3.zero;
+public Vector3 mocapGameOrigin = Vector3.zero;
+
+
     [Header("Live Sword Tracking")]
     public Transform liveMocapSource;
     public OptitrackRigidBody liveRigidBody;
@@ -391,6 +400,29 @@ void UpdateShieldVisibility()
     // LIVE SWORD
     // -------------------------
 
+
+// Converts a tracked position into Duck Knight's game space.
+private Vector3 AlignMocapPosition(Vector3 trackedPosition)
+{
+    Quaternion alignment = Quaternion.Euler(
+        0f, mocapAlignmentY, 0f
+    );
+
+    return mocapGameOrigin +
+        alignment * (trackedPosition - mocapTrackingOrigin);
+}
+
+// Converts a tracked rotation into Duck Knight's game space.
+private Quaternion AlignMocapRotation(Quaternion trackedRotation)
+{
+    Quaternion alignment = Quaternion.Euler(
+        0f, mocapAlignmentY, 0f
+    );
+
+    return alignment * trackedRotation;
+}
+
+
     void UpdateLiveSword()
     {
         SwordActive = HasLiveTracking();
@@ -400,13 +432,16 @@ void UpdateShieldVisibility()
             liveMocapSource == null)
             return;
 
-        Vector3 mappedPosition =
-            liveMocapSource.position * liveMocapScale
-            + liveMocapPositionOffset;
 
-        Quaternion mappedRotation =
-            liveMocapSource.rotation *
-            Quaternion.Euler(liveMocapRotationOffset);
+Vector3 mappedPosition =
+    AlignMocapPosition(liveMocapSource.position)
+    * liveMocapScale
+    + liveMocapPositionOffset;
+
+Quaternion mappedRotation =
+    AlignMocapRotation(liveMocapSource.rotation)
+    * Quaternion.Euler(liveMocapRotationOffset);
+
 
         swordTransform.position = mappedPosition;
         swordTransform.rotation = mappedRotation;
@@ -431,13 +466,16 @@ void UpdateShieldVisibility()
             shieldMocapSource == null)
             return;
 
-        shieldTransform.position =
-            shieldMocapSource.position * shieldMocapScale
-            + shieldMocapPositionOffset;
+        
+shieldTransform.position =
+    AlignMocapPosition(shieldMocapSource.position)
+    * shieldMocapScale
+    + shieldMocapPositionOffset;
 
-        shieldTransform.rotation =
-            shieldMocapSource.rotation *
-            Quaternion.Euler(shieldMocapRotationOffset);
+shieldTransform.rotation =
+    AlignMocapRotation(shieldMocapSource.rotation)
+    * Quaternion.Euler(shieldMocapRotationOffset);
+
     }
 
     // -------------------------

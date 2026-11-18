@@ -404,7 +404,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::InputManager
   swordTransform: {fileID: 529237747039576786}
   mocapTarget: {fileID: 2020719293}
-  swordSwingPivot: {fileID: 529237747039576786}
+  swordSwingPivot: {fileID: 595198324}
   duckTransform: {fileID: 487384180}
   shieldTransform: {fileID: 1760345162}
   shieldModel: {fileID: 1275924135}
@@ -2137,7 +2137,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OptitrackRigidBody
   StreamingClient: {fileID: 1805735314}
-  RigidBodyId: 0
+  RigidBodyId: 55
   NetworkCompensation: 1
 --- !u!4 &723624280
 Transform:
@@ -4524,7 +4524,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   StreamingClient: {fileID: 1805735314}
-  RigidBodyId: 15
+  RigidBodyId: 50
   NetworkCompensation: 0
 --- !u!65 &1956704452
 BoxCollider:
