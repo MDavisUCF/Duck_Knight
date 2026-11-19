@@ -3322,9 +3322,9 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
-  m_Size: {x: 2, y: 1.6, z: 5}
+  m_Size: {x: 1.7, y: 1.375, z: 3}
   m_Center: {x: -0.082890615, y: 0.7536451, z: 0.07302592}
 --- !u!23 &1349767637
 MeshRenderer:
@@ -5199,7 +5199,7 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Size: {x: 0.37059987, y: 2.4072437, z: 0.7506151}
   m_Center: {x: -0.010645337, y: 1.1311388, z: 0.01187551}
