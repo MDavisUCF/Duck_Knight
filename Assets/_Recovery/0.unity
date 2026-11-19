@@ -317,7 +317,11 @@ MonoBehaviour:
   gameRunning: 1
   maxEggs: 4
   currentEggs: 4
-  damageImmunityDuration: 1
+  hitsPerEgg: 3
+  damageTaken: 0
+  mocapReadyPanel: {fileID: 0}
+  endGamePanel: {fileID: 0}
+  resultText: {fileID: 0}
 --- !u!4 &51123285
 Transform:
   m_ObjectHideFlags: 0
@@ -613,13 +617,35 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::InputManager
   swordTransform: {fileID: 529237747039576786}
   mocapTarget: {fileID: 2020719293}
+  swordSwingPivot: {fileID: 0}
+  duckTransform: {fileID: 0}
+  shieldTransform: {fileID: 0}
+  shieldModel: {fileID: 0}
+  swordRestPoint: {fileID: 0}
+  shieldRestPoint: {fileID: 0}
   currentMode: 0
-  moveSpeed: 5
+  gameplayCamera: {fileID: 0}
+  mouseGroundHeight: 0
+  swordReach: 1.2
+  swordHeightOffset: 0.75
+  duckRotationSpeed: 12
+  swingDuration: 0.35
+  swingCooldown: 0.15
+  swingStartAngle: -70
+  swingEndAngle: 70
+  mocapAlignmentY: 180
+  mocapTrackingOrigin: {x: 0, y: 0, z: 0}
+  mocapGameOrigin: {x: 0, y: 0, z: 0}
   liveMocapSource: {fileID: 1956704450}
   liveRigidBody: {fileID: 1956704451}
   liveMocapPositionOffset: {x: 0, y: 0, z: 0}
   liveMocapRotationOffset: {x: 0, y: 0, z: 0}
   liveMocapScale: 1
+  shieldMocapSource: {fileID: 0}
+  shieldRigidBody: {fileID: 0}
+  shieldMocapPositionOffset: {x: 0, y: 0, z: 0}
+  shieldMocapRotationOffset: {x: 0, y: 0, z: 0}
+  shieldMocapScale: 1
   trackingTimeout: 0.25
   shieldDuration: 5
 --- !u!4 &107169736
@@ -1840,8 +1866,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DuckKnightMovement
   swordTransform: {fileID: 529237747039576786}
+  inputManager: {fileID: 0}
   groundHeight: 0
   positionOffset: {x: 0, y: 0, z: 0}
+  followSpeed: 5
+  keyboardMoveSpeed: 5
+  rotationOffset: 0
+  rotationSpeed: 12
 --- !u!4 &487384180
 Transform:
   m_ObjectHideFlags: 0
@@ -3104,13 +3135,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AudioManager
   audioSource: {fileID: 1384617152}
-  scoreClip: {fileID: 8300000, guid: fc3a0b5a82e07f14cb5cead2121d32b4, type: 3}
-  dangerClip: {fileID: 8300000, guid: 2fb069180b3eb684ba845ece531e903e, type: 3}
-  propActivateClip: {fileID: 8300000, guid: 62dec4d9aae819147a008125e3cb6ebf, type: 3}
-  propDeactivateClip: {fileID: 8300000, guid: 27a1d352114778e4c80d0ba0f5cad7eb, type: 3}
+  musicSource: {fileID: 0}
+  goblinDeathClips: []
+  shieldBlockClip: {fileID: 0}
+  goblinAttackClip: {fileID: 0}
+  fireballImpactClip: {fileID: 0}
+  fireballLaunchClip: {fileID: 0}
+  eggCrackClip: {fileID: 0}
+  eggBreakClip: {fileID: 0}
+  shieldActivateClip: {fileID: 0}
+  shieldDeactivateClip: {fileID: 0}
+  victoryClip: {fileID: 0}
+  defeatClip: {fileID: 0}
   inputModeClip: {fileID: 8300000, guid: 06a96feecc6e7834899dbddeab595fd4, type: 3}
   resetClip: {fileID: 8300000, guid: e298abacfdd3dfb4f920503917134085, type: 3}
+  backgroundMusic: {fileID: 0}
   soundVolume: 0.7
+  musicVolume: 0.4
 --- !u!82 &1384617152
 AudioSource:
   m_ObjectHideFlags: 0
@@ -3420,7 +3461,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 047e38410473318449a7bf45121c8002, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GoblinSpawner
-  goblinPrefab: {fileID: 2392447348170521975, guid: aca50483ff7a43145845fe3dec3e2dd0, type: 3}
+  goblinPrefabs: []
   duckKnight: {fileID: 487384180}
   inputManager: {fileID: 107169735}
   swordCollider: {fileID: 1349767636}

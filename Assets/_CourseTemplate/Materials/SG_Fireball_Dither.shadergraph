@@ -246,8 +246,8 @@
     "m_ShaderOutputName": "Emission",
     "m_StageCapability": 2,
     "m_Value": {
-        "x": 1.0,
-        "y": 0.1764705926179886,
+        "x": 0.2725490629673004,
+        "y": 0.0,
         "z": 0.0
     },
     "m_DefaultValue": {
@@ -781,7 +781,7 @@
         "m_Id": "849bd12c9e0b44aeb7f35ad754dd096b"
     },
     "m_AllowMaterialOverride": false,
-    "m_SurfaceType": 0,
+    "m_SurfaceType": 1,
     "m_ZTestMode": 4,
     "m_ZWriteControl": 0,
     "m_AlphaMode": 0,
@@ -996,8 +996,8 @@
     "m_ShaderOutputName": "BaseColor",
     "m_StageCapability": 2,
     "m_Value": {
-        "x": 1.0,
-        "y": 0.2705881893634796,
+        "x": 0.6235294342041016,
+        "y": 0.11486935615539551,
         "z": 0.0
     },
     "m_DefaultValue": {
